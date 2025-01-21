@@ -57,6 +57,11 @@ func Sunrise(longitude, ha, eqtime float64) float64 {
 	return 720 - 4*(longitude+ha) - eqtime
 }
 
+// Sunset calculates the UTC time of sunset in minutes
+func Sunset(longitude, ha, eqtime float64) float64 {
+	return 720 - 4*(longitude-ha) - eqtime
+}
+
 // SolarNoon calculates the solar noon in minutes
 func SolarNoon(longitude, eqtime float64) float64 {
 	return 720 - 4*longitude - eqtime

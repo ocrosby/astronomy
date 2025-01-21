@@ -184,6 +184,24 @@ func TestSunrise(t *testing.T) {
 	}
 }
 
+func TestSunset(t *testing.T) {
+	tests := []struct {
+		longitude float64
+		ha        float64
+		eqtime    float64
+		expected  float64
+	}{
+		{-74.0060, 1.0, 3.0, 720 - 4*(-74.0060-1.0) - 3.0},
+	}
+
+	for _, tt := range tests {
+		result := Sunset(tt.longitude, tt.ha, tt.eqtime)
+		if math.Abs(result-tt.expected) > 1e-6 {
+			t.Errorf("Sunset(%v, %v, %v) = %v; want %v", tt.longitude, tt.ha, tt.eqtime, result, tt.expected)
+		}
+	}
+}
+
 func TestSolarNoon(t *testing.T) {
 	tests := []struct {
 		longitude float64

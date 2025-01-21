@@ -26,6 +26,14 @@ To install the dependencies, run:
 make install
 ```
 
+## Validating Syntax
+
+To validate the syntax of the code, run:
+
+```sh
+make lint
+```
+
 ## Running Tests
 
 To run the tests, run:

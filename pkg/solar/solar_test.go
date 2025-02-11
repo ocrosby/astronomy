@@ -1,23 +1,47 @@
 package solar
 
 import (
+	"github.com/ocrosby/astronomy/pkg/constants"
 	"math"
 	"testing"
 	"time"
 )
+
+func TestIsLeapYear(t *testing.T) {
+	tests := []struct {
+		year     int
+		expected bool
+	}{
+		{2000, true},  // divisible by 400
+		{1900, false}, // divisible by 100 but not by 400
+		{2004, true},  // divisible by 4 but not by 100
+		{2001, false}, // not divisible by 4
+	}
+
+	for _, tt := range tests {
+		result := IsLeapYear(tt.year)
+		if result != tt.expected {
+			t.Errorf("IsLeapYear(%v) = %v; want %v", tt.year, result, tt.expected)
+		}
+	}
+}
 
 func TestFractionalYear(t *testing.T) {
 	tests := []struct {
 		date     time.Time
 		expected float64
 	}{
-		{time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), 0},
-		{time.Date(2023, 6, 21, 12, 0, 0, 0, time.UTC), 2 * math.Pi / 365 * (171 + 0)},
+		{time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), -0.00860710316051998},    // start of the year
+		{time.Date(2023, 12, 31, 23, 59, 59, 0, time.UTC), 6.2738609454223555}, // end of the year
+		{time.Date(2023, 6, 21, 12, 0, 0, 0, time.UTC), 2.9436292808978335},    // middle of the year
+		{time.Date(2020, 2, 29, 0, 0, 0, 0, time.UTC), 1.0042796187705076},     // leap year
+		{time.Date(2023, 2, 28, 0, 0, 0, 0, time.UTC), 0.9898168634597978},     // non-leap year
+		{time.Date(2023, 12, 31, 0, 0, 0, 0, time.UTC), 6.257363997698026},     // last day of the year
 	}
 
 	for _, tt := range tests {
 		result := FractionalYear(tt.date)
-		if math.Abs(result-tt.expected) > 1e-2 {
+		if math.Abs(result-tt.expected) > 1e-6 {
 			t.Errorf("FractionalYear(%v) = %v; want %v", tt.date, result, tt.expected)
 		}
 	}
@@ -97,7 +121,11 @@ func TestSolarHourAngle(t *testing.T) {
 		tst      float64
 		expected float64
 	}{
-		{720.0, 720.0/4 - 180},
+		{720.0, 720.0/4 - 180},   // typical case
+		{0.0, 0.0/4 - 180},       // edge case: start of the day
+		{1440.0, 1440.0/4 - 180}, // edge case: end of the day
+		{-720.0, -720.0/4 - 180}, // error case: negative time
+		{2880.0, 2880.0/4 - 180}, // error case: time beyond 24 hours
 	}
 
 	for _, tt := range tests {
@@ -119,7 +147,7 @@ func TestSolarZenithAngle(t *testing.T) {
 			40.7128,
 			0.4091,
 			0.0,
-			math.Acos(math.Sin(40.7128*DegToRad)*math.Sin(0.4091) + math.Cos(40.7128*DegToRad)*math.Cos(0.4091)*math.Cos(0.0*DegToRad)),
+			math.Acos(math.Sin(40.7128*constants.Rad)*math.Sin(0.4091) + math.Cos(40.7128*constants.Rad)*math.Cos(0.4091)*math.Cos(0.0*constants.Rad)),
 		},
 	}
 
@@ -138,7 +166,7 @@ func TestSolarAzimuth(t *testing.T) {
 		zenith   float64
 		expected float64
 	}{
-		{40.7128, 0.4091, 1.0, math.Acos((math.Sin(40.7128*DegToRad)*math.Cos(1.0)-math.Sin(0.4091))/(math.Cos(40.7128*DegToRad)*math.Sin(1.0))) * RadToDeg},
+		{40.7128, 0.4091, 1.0, math.Acos((math.Sin(40.7128*constants.Rad)*math.Cos(1.0)-math.Sin(0.4091))/(math.Cos(40.7128*constants.Rad)*math.Sin(1.0))) * constants.Deg},
 	}
 
 	for _, tt := range tests {
@@ -155,7 +183,7 @@ func TestSunriseSunsetHourAngle(t *testing.T) {
 		decl     float64
 		expected float64
 	}{
-		{40.7128, 0.4091, math.Acos((math.Cos(90.833*DegToRad)/(math.Cos(40.7128*DegToRad)*math.Cos(0.4091)) - math.Tan(40.7128*DegToRad)*math.Tan(0.4091))) * RadToDeg},
+		{40.7128, 0.4091, math.Acos((math.Cos(90.833*constants.Rad)/(math.Cos(40.7128*constants.Rad)*math.Cos(0.4091)) - math.Tan(40.7128*constants.Rad)*math.Tan(0.4091))) * constants.Deg},
 	}
 
 	for _, tt := range tests {

@@ -1,15 +1,30 @@
 package solar
 
 import (
+	"github.com/ocrosby/astronomy/pkg/constants"
 	"math"
 	"time"
 )
 
+// IsLeapYear checks if a year is a leap year
+func IsLeapYear(year int) bool {
+	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
+}
+
+// DaysInYear returns the number of days in a year
+func DaysInYear(year int) int {
+	if IsLeapYear(year) {
+		return 366
+	}
+	return 365
+}
+
 // FractionalYear calculates the fractional year in radians
 func FractionalYear(t time.Time) float64 {
-	dayOfYear := float64(t.YearDay())
+	daysInYear := float64(DaysInYear(t.Year()))
+	zeroBasedDayOfYear := float64(t.YearDay() - 1)
 	hour := float64(t.Hour())
-	return 2 * math.Pi / 365 * (dayOfYear - 1 + (hour-12)/24)
+	return 2 * math.Pi / daysInYear * (zeroBasedDayOfYear + (hour-12.0)/24.0)
 }
 
 // EquationOfTime calculates the equation of time in minutes
@@ -39,17 +54,17 @@ func SolarHourAngle(tst float64) float64 {
 
 // SolarZenithAngle calculates the solar zenith angle in radians
 func SolarZenithAngle(lat, decl, ha float64) float64 {
-	return math.Acos(math.Sin(lat*DegToRad)*math.Sin(decl) + math.Cos(lat*DegToRad)*math.Cos(decl)*math.Cos(ha*DegToRad))
+	return math.Acos(math.Sin(lat*constants.Rad)*math.Sin(decl) + math.Cos(lat*constants.Rad)*math.Cos(decl)*math.Cos(ha*constants.Rad))
 }
 
 // SolarAzimuth calculates the solar azimuth angle in degrees
 func SolarAzimuth(lat, decl, zenith float64) float64 {
-	return math.Acos((math.Sin(lat*DegToRad)*math.Cos(zenith)-math.Sin(decl))/(math.Cos(lat*DegToRad)*math.Sin(zenith))) * RadToDeg
+	return math.Acos((math.Sin(lat*constants.Rad)*math.Cos(zenith)-math.Sin(decl))/(math.Cos(lat*constants.Rad)*math.Sin(zenith))) * constants.Deg
 }
 
 // SunriseSunsetHourAngle calculates the hour angle for sunrise or sunset
 func SunriseSunsetHourAngle(lat, decl float64) float64 {
-	return math.Acos((math.Cos(90.833*DegToRad)/(math.Cos(lat*DegToRad)*math.Cos(decl)) - math.Tan(lat*DegToRad)*math.Tan(decl))) * RadToDeg
+	return math.Acos((math.Cos(90.833*constants.Rad)/(math.Cos(lat*constants.Rad)*math.Cos(decl)) - math.Tan(lat*constants.Rad)*math.Tan(decl))) * constants.Deg
 }
 
 // Sunrise calculates the UTC time of sunrise in minutes

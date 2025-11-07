@@ -2,6 +2,7 @@ package angles
 
 import (
 	"math"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -144,5 +145,393 @@ var _ = Describe("Angles", func() {
 			Entry("0.01667", 0.01667, 0, 1, 0.012),
 			Entry("-0.08334", -0.08334, 0, -5, -0.024),
 		)
+	})
+
+	Describe("AngleFormatter", func() {
+		Describe("fluent interface with 12.3456", func() {
+			It("should format as 12.35 (Dd with precision 2)", func() {
+				result := NewFormatter(12.3456).Format(Dd).Precision(2).String()
+				Expect(result).To(Equal("12.35"))
+			})
+
+			It("should format as '12 20' (DMM)", func() {
+				result := NewFormatter(12.3456).Format(DMM).String()
+				Expect(result).To(Equal("12 20"))
+			})
+
+			It("should format as '12 20.74' (DMMm with precision 2)", func() {
+				result := NewFormatter(12.3456).Format(DMMm).Precision(2).String()
+				Expect(result).To(Equal("12 20.74"))
+			})
+
+			It("should format as '12 20 44' (DMMSS)", func() {
+				result := NewFormatter(12.3456).Format(DMMSS).String()
+				Expect(result).To(Equal("12 20 44"))
+			})
+
+			It("should format as '12 20 44.16' (DMMSSs with precision 2)", func() {
+				result := NewFormatter(12.3456).Format(DMMSSs).Precision(2).String()
+				Expect(result).To(Equal("12 20 44.16"))
+			})
+		})
+
+		Describe("width formatting", func() {
+			It("should apply left justification with width", func() {
+				result := NewFormatter(12.3456).Format(Dd).Precision(2).Width(10).String()
+				Expect(result).To(Equal("12.35     "))
+				Expect(len(result)).To(Equal(10))
+			})
+
+			It("should handle negative values with width", func() {
+				result := NewFormatter(-12.3456).Format(Dd).Precision(2).Width(12).String()
+				Expect(result).To(Equal("-12.35      "))
+				Expect(len(result)).To(Equal(12))
+			})
+		})
+
+		Describe("negative angle handling", func() {
+			It("should handle negative angles in DMM format", func() {
+				result := NewFormatter(-0.3456).Format(DMM).String()
+				Expect(result).To(Equal("0 -20"))
+			})
+
+			It("should handle negative angles in DMMm format", func() {
+				result := NewFormatter(-0.3456).Format(DMMm).Precision(2).String()
+				Expect(result).To(Equal("0 -20.74"))
+			})
+
+			It("should handle negative angles in DMMSS format", func() {
+				result := NewFormatter(-0.3456).Format(DMMSS).String()
+				Expect(result).To(Equal("0 -20 44"))
+			})
+
+			It("should handle negative angles in DMMSSs format", func() {
+				result := NewFormatter(-0.3456).Format(DMMSSs).Precision(2).String()
+				Expect(result).To(Equal("0 -20 44.16"))
+			})
+		})
+
+		Describe("chaining methods", func() {
+			It("should allow method chaining in any order", func() {
+				result1 := NewFormatter(12.3456).Precision(3).Format(DMMSSs).Width(15).String()
+				result2 := NewFormatter(12.3456).Width(15).Format(DMMSSs).Precision(3).String()
+				Expect(result1).To(Equal(result2))
+				Expect(len(result1)).To(Equal(15))
+			})
+		})
+	})
+
+	Describe("ParseAngle", func() {
+		Describe("valid formats", func() {
+			It("should parse Dd format", func() {
+				angle, err := ParseAngle("12.35")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", 12.35, 1e-6))
+				Expect(angle.format).To(Equal(Dd))
+			})
+
+			It("should parse DMM format", func() {
+				angle, err := ParseAngle("12 20")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", 12.333333, 1e-6))
+				Expect(angle.format).To(Equal(DMM))
+			})
+
+			It("should parse DMMm format", func() {
+				angle, err := ParseAngle("12 20.74")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", 12.3456666, 1e-6))
+				Expect(angle.format).To(Equal(DMMm))
+			})
+
+			It("should parse DMMSS format", func() {
+				angle, err := ParseAngle("12 20 44")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", 12.345555, 1e-6))
+				Expect(angle.format).To(Equal(DMMSS))
+			})
+
+			It("should parse DMMSSs format", func() {
+				angle, err := ParseAngle("12 20 44.16")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", 12.3456, 1e-6))
+				Expect(angle.format).To(Equal(DMMSSs))
+			})
+		})
+
+		Describe("negative angles", func() {
+			It("should parse negative Dd format", func() {
+				angle, err := ParseAngle("-12.35")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", -12.35, 1e-6))
+				Expect(angle.format).To(Equal(Dd))
+			})
+
+			It("should parse negative DMM format", func() {
+				angle, err := ParseAngle("-12 20")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", -12.333333, 1e-6))
+				Expect(angle.format).To(Equal(DMM))
+			})
+
+			It("should parse small negative angles", func() {
+				angle, err := ParseAngle("0 -20")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", -0.333333, 1e-6))
+				Expect(angle.format).To(Equal(DMM))
+			})
+
+			It("should parse negative seconds", func() {
+				angle, err := ParseAngle("0 -20 44.16")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", -0.345600, 1e-6))
+				Expect(angle.format).To(Equal(DMMSSs))
+			})
+		})
+
+		Describe("round-trip compatibility", func() {
+			It("should round-trip through formatter", func() {
+				original := 12.3456
+				formatted := NewFormatter(original).Format(DMMSSs).Precision(2).String()
+				parsed, err := ParseAngle(formatted)
+
+				Expect(err).To(BeNil())
+				Expect(parsed.alpha).To(BeNumerically("~", original, 1e-6))
+				Expect(parsed.format).To(Equal(DMMSSs))
+			})
+
+			It("should round-trip negative angles with precision loss", func() {
+				original := -0.3456
+				formatted := NewFormatter(original).Format(DMM).String() // "0 -20"
+				parsed, err := ParseAngle(formatted)
+
+				Expect(err).To(BeNil())
+				// DMM format truncates to whole minutes, so -0.3456 becomes -20/60 = -0.3333...
+				Expect(parsed.alpha).To(BeNumerically("~", -20.0/60.0, 1e-6))
+				Expect(parsed.format).To(Equal(DMM))
+			})
+
+			It("should round-trip negative angles precisely with DMMSSs", func() {
+				original := -0.3456
+				formatted := NewFormatter(original).Format(DMMSSs).Precision(2).String()
+				parsed, err := ParseAngle(formatted)
+
+				Expect(err).To(BeNil())
+				Expect(parsed.alpha).To(BeNumerically("~", original, 1e-4))
+				Expect(parsed.format).To(Equal(DMMSSs))
+			})
+		})
+
+		Describe("error cases", func() {
+			Describe("basic validation", func() {
+				It("should reject empty strings", func() {
+					_, err := ParseAngle("")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("empty input"))
+				})
+
+				It("should reject whitespace-only strings", func() {
+					_, err := ParseAngle("   ")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("whitespace"))
+				})
+
+				It("should reject too many components", func() {
+					_, err := ParseAngle("12 20 44 16")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("expected 1-3"))
+				})
+			})
+
+			Describe("invalid characters", func() {
+				It("should reject alphabetic characters in decimal format", func() {
+					_, err := ParseAngle("12abc")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid decimal degrees"))
+				})
+
+				It("should reject special symbols", func() {
+					_, err := ParseAngle("12@34")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid character"))
+				})
+
+				It("should reject mixed invalid characters", func() {
+					_, err := ParseAngle("12 20# 44")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid character"))
+				})
+			})
+
+			Describe("decimal format errors", func() {
+				It("should reject multiple decimal points", func() {
+					_, err := ParseAngle("12.34.56")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("multiple decimal points"))
+				})
+
+				It("should reject multiple signs", func() {
+					_, err := ParseAngle("-+12.34")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("multiple signs"))
+				})
+
+				It("should reject misplaced signs", func() {
+					_, err := ParseAngle("12.-34")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("sign must be at beginning"))
+				})
+			})
+
+			Describe("component validation errors", func() {
+				It("should reject invalid degrees", func() {
+					_, err := ParseAngle("abc 20")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid degrees"))
+				})
+
+				It("should reject degrees with decimal point in integer format", func() {
+					_, err := ParseAngle("12.5 20")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("unexpected decimal point"))
+				})
+
+				It("should reject invalid minutes", func() {
+					_, err := ParseAngle("12 abc")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid minutes"))
+				})
+
+				It("should reject invalid seconds", func() {
+					_, err := ParseAngle("12 20 abc")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid seconds"))
+				})
+
+				It("should reject non-numeric degrees", func() {
+					_, err := ParseAngle("xyz 20")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid degrees"))
+				})
+
+				It("should reject non-numeric minutes", func() {
+					_, err := ParseAngle("12 xyz")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid minutes"))
+				})
+
+				It("should reject non-numeric seconds", func() {
+					_, err := ParseAngle("12 20 xyz")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid seconds"))
+				})
+			})
+
+			Describe("range validation errors", func() {
+				It("should reject minutes >= 60 in DMM format", func() {
+					_, err := ParseAngle("12 60")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("must be less than 60"))
+				})
+
+				It("should reject minutes >= 60 in DMMm format", func() {
+					_, err := ParseAngle("12 60.5")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("must be less than 60"))
+				})
+
+				It("should reject minutes >= 60 in DMMSS format", func() {
+					_, err := ParseAngle("12 60 30")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("must be less than 60"))
+				})
+
+				It("should reject seconds >= 60 in DMMSS format", func() {
+					_, err := ParseAngle("12 30 60")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("must be less than 60"))
+				})
+
+				It("should reject seconds >= 60 in DMMSSs format", func() {
+					_, err := ParseAngle("12 30 60.5")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("must be less than 60"))
+				})
+
+				It("should reject negative minutes >= 60", func() {
+					_, err := ParseAngle("12 -60")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("must be less than 60"))
+				})
+			})
+
+			Describe("malformed number errors", func() {
+				It("should reject multiple decimal points in minutes", func() {
+					_, err := ParseAngle("12 20.34.56")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("multiple decimal points"))
+				})
+
+				It("should reject multiple signs in components", func() {
+					_, err := ParseAngle("12 -+20")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("multiple signs"))
+				})
+
+				It("should reject misplaced signs in components", func() {
+					_, err := ParseAngle("12 2-0")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("sign must be at beginning"))
+				})
+			})
+
+			Describe("edge case errors", func() {
+				It("should reject infinity", func() {
+					_, err := ParseAngle("inf")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("infinite or NaN"))
+				})
+
+				It("should reject NaN", func() {
+					_, err := ParseAngle("NaN")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("infinite or NaN"))
+				})
+
+				It("should reject +inf", func() {
+					_, err := ParseAngle("+inf")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("infinite or NaN"))
+				})
+
+				It("should reject -inf", func() {
+					_, err := ParseAngle("-inf")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("infinite or NaN"))
+				})
+
+				It("should handle very long invalid strings gracefully", func() {
+					longInvalid := strings.Repeat("xyz", 100) // Use valid chars but invalid format
+					_, err := ParseAngle(longInvalid)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid decimal degrees"))
+				})
+			})
+		})
+
+		Describe("whitespace handling", func() {
+			It("should handle leading/trailing whitespace", func() {
+				angle, err := ParseAngle("  12.35  ")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", 12.35, 1e-6))
+			})
+
+			It("should handle multiple spaces between components", func() {
+				angle, err := ParseAngle("12   20    44.16")
+				Expect(err).To(BeNil())
+				Expect(angle.alpha).To(BeNumerically("~", 12.3456, 1e-6))
+				Expect(angle.format).To(Equal(DMMSSs))
+			})
+		})
 	})
 })

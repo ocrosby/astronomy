@@ -1,0 +1,38 @@
+version: '3'
+
+tasks:
+  clean:
+    desc: "Clean up build artifacts"
+    cmds:
+      - echo "Cleaning up..."
+      - rm -f coverprofile.out
+
+  deps:
+    desc: "Install development dependencies"
+    cmds:
+      - echo "Installing dependencies..."
+      - go install github.com/go-task/task/v3/cmd/task@latest
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - go install github.com/onsi/ginkgo/v2/ginkgo@latest
+      - go install github.com/onsi/gomega/...@latest
+
+  install:
+    desc: "Install project dependencies"
+    deps:
+      - deps
+    cmds:
+      - echo "Installing ..."
+      - go mod tidy
+      - go mod download
+
+  lint:
+    desc: "Run golangci-lint"
+    cmds:
+      - echo "Running golangci-lint ..."
+      - golangci-lint run
+
+  test:
+    desc: "Run unit tests with Ginkgo"
+    cmds:
+      - echo "Running unit tests with Ginkgo ..."
+      - ginkgo -r --randomize-all --randomize-suites --fail-on-pending --cover --trace

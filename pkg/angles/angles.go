@@ -482,14 +482,6 @@ func parseFloatComponent(str, componentName, originalInput string) (float64, err
 	return value, nil
 }
 
-// abs returns the absolute value of an integer
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
 // ConcreteAngleParser implements AngleParser interface
 type ConcreteAngleParser struct{}
 
@@ -633,36 +625,40 @@ func (f *ExtensibleAngleFormatter) WithWidth(width int) *ExtensibleAngleFormatte
 
 // Validation functions to eliminate duplicated validation logic
 
-// validateMinutesInt validates integer minutes are within valid range
-func validateMinutesInt(minutes int, originalInput string) error {
-	if abs(minutes) >= MaxMinutes {
-		return fmt.Errorf("invalid minutes value: must be less than %d, got %d in '%s'", MaxMinutes, minutes, originalInput)
-	}
-	return nil
-}
-
-// validateMinutesFloat validates float minutes are within valid range
-func validateMinutesFloat(minutes float64, originalInput string) error {
+// validateMinutes validates minutes are within valid range (unified for int and float)
+func validateMinutes(minutes float64, originalInput string) error {
 	if math.Abs(minutes) >= MaxMinutes {
 		return fmt.Errorf("invalid minutes value: must be less than %d, got %.2f in '%s'", MaxMinutes, minutes, originalInput)
 	}
 	return nil
 }
 
-// validateSecondsInt validates integer seconds are within valid range
-func validateSecondsInt(seconds int, originalInput string) error {
-	if abs(seconds) >= int(MaxSeconds) {
-		return fmt.Errorf("invalid seconds value: must be less than %d, got %d in '%s'", int(MaxSeconds), seconds, originalInput)
-	}
-	return nil
+// validateMinutesInt validates integer minutes are within valid range
+func validateMinutesInt(minutes int, originalInput string) error {
+	return validateMinutes(float64(minutes), originalInput)
 }
 
-// validateSecondsFloat validates float seconds are within valid range
-func validateSecondsFloat(seconds float64, originalInput string) error {
+// validateMinutesFloat validates float minutes are within valid range
+func validateMinutesFloat(minutes float64, originalInput string) error {
+	return validateMinutes(minutes, originalInput)
+}
+
+// validateSeconds validates seconds are within valid range (unified for int and float)
+func validateSeconds(seconds float64, originalInput string) error {
 	if math.Abs(seconds) >= MaxSeconds {
 		return fmt.Errorf("invalid seconds value: must be less than %.0f, got %.2f in '%s'", MaxSeconds, seconds, originalInput)
 	}
 	return nil
+}
+
+// validateSecondsInt validates integer seconds are within valid range
+func validateSecondsInt(seconds int, originalInput string) error {
+	return validateSeconds(float64(seconds), originalInput)
+}
+
+// validateSecondsFloat validates float seconds are within valid range
+func validateSecondsFloat(seconds float64, originalInput string) error {
+	return validateSeconds(seconds, originalInput)
 }
 
 // DMSComponents holds the components of a DMS angle with formatting context

@@ -136,25 +136,24 @@ func CrossProduct(v1, v2 Vector2D) float64 {
 	return v1.X*v2.Y - v1.Y*v2.X
 }
 
-// Magnitude calculates the magnitude of a vector
+// Magnitude calculates the magnitude of a vector using method
 func Magnitude(v Vector2D) float64 {
-	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+	return v.Magnitude()
 }
 
-// Normalize normalizes a vector
+// Normalize normalizes a vector using method
 func Normalize(v Vector2D) Vector2D {
-	mag := Magnitude(v)
-	return Vector2D{v.X / mag, v.Y / mag}
+	return v.Normalize()
 }
 
-// DotProduct calculates dot product of two 2D vectors
+// DotProduct calculates dot product of two 2D vectors using method
 func DotProduct(v1, v2 Vector2D) float64 {
-	return v1.X*v2.X + v1.Y*v2.Y
+	return v1.DotProduct(v2)
 }
 
-// ScalarMultiply multiplies a 2D vector by a scalar
+// ScalarMultiply multiplies a 2D vector by a scalar using method
 func ScalarMultiply(v Vector2D, s float64) Vector2D {
-	return Vector2D{v.X * s, v.Y * s}
+	return v.ScalarMultiply(s)
 }
 
 // Rotate rotates a vector by an angle in radians
@@ -264,9 +263,7 @@ func BulkVectorToPolar(vectors []Vector2D) ([]float64, []float64) {
 	angles := make([]float64, n)
 
 	for i, v := range vectors {
-		rSquared := v.X*v.X + v.Y*v.Y
-		radii[i] = math.Sqrt(rSquared)
-		angles[i] = math.Atan2(v.Y, v.X)
+		radii[i], angles[i] = VectorToPolar(v)
 	}
 
 	return radii, angles
@@ -280,16 +277,7 @@ func BulkVectorToSpherical(vectors []Vector3D) ([]float64, []float64, []float64)
 	phis := make([]float64, n)
 
 	for i, v := range vectors {
-		rSquared := v.X*v.X + v.Y*v.Y + v.Z*v.Z
-		if rSquared == 0 {
-			radii[i] = 0
-			thetas[i] = 0
-			phis[i] = 0
-		} else {
-			radii[i] = math.Sqrt(rSquared)
-			thetas[i] = math.Atan2(v.Y, v.X)
-			phis[i] = math.Acos(v.Z / radii[i])
-		}
+		radii[i], thetas[i], phis[i] = VectorToSpherical(v)
 	}
 
 	return radii, thetas, phis
@@ -304,9 +292,7 @@ func BulkPolarToVector(radii, angles []float64) []Vector2D {
 
 	vectors := make([]Vector2D, n)
 	for i := 0; i < n; i++ {
-		cosTheta := math.Cos(angles[i])
-		sinTheta := math.Sin(angles[i])
-		vectors[i] = Vector2D{radii[i] * cosTheta, radii[i] * sinTheta}
+		vectors[i] = PolarToVector(radii[i], angles[i])
 	}
 
 	return vectors
@@ -324,49 +310,40 @@ func BulkSphericalToVector(radii, thetas, phis []float64) []Vector3D {
 
 	vectors := make([]Vector3D, n)
 	for i := 0; i < n; i++ {
-		sinPhi := math.Sin(phis[i])
-		cosPhi := math.Cos(phis[i])
-		cosTheta := math.Cos(thetas[i])
-		sinTheta := math.Sin(thetas[i])
-		vectors[i] = Vector3D{
-			radii[i] * sinPhi * cosTheta,
-			radii[i] * sinPhi * sinTheta,
-			radii[i] * cosPhi,
-		}
+		vectors[i] = SphericalToVector(radii[i], thetas[i], phis[i])
 	}
 
 	return vectors
 }
 
-// Add3D adds two 3D vectors
+// Add3D adds two 3D vectors using method
 func Add3D(v1, v2 Vector3D) Vector3D {
-	return Vector3D{v1.X + v2.X, v1.Y + v2.Y, v1.Z + v2.Z}
+	return v1.Add(v2)
 }
 
-// Subtract3D subtracts two 3D vectors
+// Subtract3D subtracts two 3D vectors using method
 func Subtract3D(v1, v2 Vector3D) Vector3D {
-	return Vector3D{v1.X - v2.X, v1.Y - v2.Y, v1.Z - v2.Z}
+	return v1.Subtract(v2)
 }
 
-// DotProduct3D calculates the dot product of two 3D vectors
+// DotProduct3D calculates the dot product of two 3D vectors using method
 func DotProduct3D(v1, v2 Vector3D) float64 {
-	return v1.X*v2.X + v1.Y*v2.Y + v1.Z*v2.Z
+	return v1.DotProduct(v2)
 }
 
-// CrossProduct3D calculates the cross product of two 3D vectors
+// CrossProduct3D calculates the cross product of two 3D vectors using method
 func CrossProduct3D(v1, v2 Vector3D) Vector3D {
-	return Vector3D{v1.Y*v2.Z - v1.Z*v2.Y, v1.Z*v2.X - v1.X*v2.Z, v1.X*v2.Y - v1.Y*v2.X}
+	return v1.CrossProduct(v2)
 }
 
-// Magnitude3D calculates the magnitude of a 3D vector
+// Magnitude3D calculates the magnitude of a 3D vector using method
 func Magnitude3D(v Vector3D) float64 {
-	return math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z)
+	return v.Magnitude()
 }
 
-// Normalize3D normalizes a 3D vector
+// Normalize3D normalizes a 3D vector using method
 func Normalize3D(v Vector3D) Vector3D {
-	mag := Magnitude3D(v)
-	return Vector3D{v.X / mag, v.Y / mag, v.Z / mag}
+	return v.Normalize()
 }
 
 // Rotate3D rotates a 3D vector by an angle in radians about the x-axis
@@ -390,53 +367,39 @@ func Rotate3Dz(v Vector3D, angle float64) Vector3D {
 	return Vector3D{v.X*cos - v.Y*sin, v.X*sin + v.Y*cos, v.Z}
 }
 
-// Angle3D calculates the angle between two 3D vectors in radians
+// Angle3D calculates the angle between two 3D vectors in radians using methods
 func Angle3D(v1, v2 Vector3D) float64 {
-	return math.Acos(DotProduct3D(v1, v2) / (Magnitude3D(v1) * Magnitude3D(v2)))
+	return math.Acos(v1.DotProduct(v2) / (v1.Magnitude() * v2.Magnitude()))
 }
 
-// ScalarMultiply3D multiplies a 3D vector by a scalar
+// ScalarMultiply3D multiplies a 3D vector by a scalar using method
 func ScalarMultiply3D(v Vector3D, s float64) Vector3D {
-	return Vector3D{v.X * s, v.Y * s, v.Z * s}
+	return v.ScalarMultiply(s)
 }
 
-// Project3D projects a 3D vector onto another 3D vector
+// Project3D projects a 3D vector onto another 3D vector using methods
 func Project3D(v1, v2 Vector3D) Vector3D {
-	return ScalarMultiply3D(v2, DotProduct3D(v1, v2)/Magnitude3D(v2))
+	return v2.ScalarMultiply(v1.DotProduct(v2) / v2.Magnitude())
 }
 
-// VectorToCylindrical3D converts a 3D vector to cylindrical coordinates
+// VectorToCylindrical3D converts a 3D vector to cylindrical coordinates (alias for compatibility)
 func VectorToCylindrical3D(v Vector3D) (r, theta, z float64) {
-	rSquared := v.X*v.X + v.Y*v.Y
-	r = math.Sqrt(rSquared)
-	theta = math.Atan2(v.Y, v.X)
-	return r, theta, v.Z
+	return VectorToCylindrical(v)
 }
 
-// CylindricalToVector3D converts cylindrical coordinates to a 3D vector
+// CylindricalToVector3D converts cylindrical coordinates to a 3D vector (alias for compatibility)
 func CylindricalToVector3D(r, theta, z float64) Vector3D {
-	return Vector3D{r * math.Cos(theta), r * math.Sin(theta), z}
+	return CylindricalToVector(r, theta, z)
 }
 
-// VectorToSpherical3D converts a 3D vector to spherical coordinates
+// VectorToSpherical3D converts a 3D vector to spherical coordinates (alias for compatibility)
 func VectorToSpherical3D(v Vector3D) (r, theta, phi float64) {
-	rSquared := v.X*v.X + v.Y*v.Y + v.Z*v.Z
-	if rSquared == 0 {
-		return 0, 0, 0
-	}
-	r = math.Sqrt(rSquared)
-	theta = math.Atan2(v.Y, v.X)
-	phi = math.Acos(v.Z / r)
-	return r, theta, phi
+	return VectorToSpherical(v)
 }
 
-// SphericalToVector3D converts spherical coordinates to a 3D vector
+// SphericalToVector3D converts spherical coordinates to a 3D vector (alias for compatibility)
 func SphericalToVector3D(r, theta, phi float64) Vector3D {
-	sinPhi := math.Sin(phi)
-	cosPhi := math.Cos(phi)
-	cosTheta := math.Cos(theta)
-	sinTheta := math.Sin(theta)
-	return Vector3D{r * sinPhi * cosTheta, r * sinPhi * sinTheta, r * cosPhi}
+	return SphericalToVector(r, theta, phi)
 }
 
 // Rotate3D rotates a 3D vector by an angle in radians about an arbitrary axis
